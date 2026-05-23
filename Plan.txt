@@ -1,0 +1,1096 @@
+En Jupyter
+Genera una funcion que obtenga el nombre de usuario de la maquina
+Crear un log
+En la carpeta Downloads copiar las carpetas y archivos a la carpeta Respaldo Descargas
+Si la carpeta Respaldo Descargas no existe se debe crear
+Eliminar los archivos de la carpeta Downloads
+
+GeoVictoria
+Crea la funcion ObtenerToken para que haga lo siguiente
+try{
+    const url = "https://customerapi.geovictoria.com/api/v1/Login";
+    const opts = {
+        url: url,
+        method: 'POST',
+        responseType: 'json',
+        resolveBodyOnly: true,
+        Secure: true,
+        ignoreInvalidCookies: true,
+        headers: {
+            'Accept' : 'application/json',
+            'Content-Type': 'application/json'
+        },
+        body: 
+            JSON.stringify({
+                User: 'd26548',
+                Password: '1ce1d333'
+        })
+    };
+    const res = await irpa_core.request.call(opts);
+    let m = `LoginGeoVictoriaWS - Obtener token: ${res.token}`;
+    await fn.log(m);
+    return res.token;
+
+}
+catch(e){
+    const err = `LoginGeoVictoriaWS - Error en servicio Login: ${e}`;
+    irpa_core.core.log(err);
+    await fn.log(err);
+    return '';
+}
+
+Guarda al token en una variable
+
+Genera la funcion ObtenerUsuarios para que haga lo siguiente
+try{
+    const url = "https://apiv3.geovictoria.com/api/User/List";
+    const req = {
+        url: url,
+        method: 'POST',
+        data: {}
+    };
+    const opts = {
+        url: url,
+        method: 'POST',
+        responseType: 'json',
+        resolveBodyOnly: true,
+        headers: {
+            'Accept' : 'application/json',
+            'Content-Type': 'application/json',
+            "Authorization": "OAuth oauth_consumer_key=\"d26548\",oauth_signature_method=\"HMAC-SHA1\",oauth_timestamp=\"1687900677\",oauth_nonce=\"oGFO0EqSUCa\",oauth_version=\"1.0\",oauth_signature=\"xXPjTubdzp8LSfRNNM6KlzEBBcE%3D\""
+        },
+    };
+    const res = await irpa_core.request.call(opts);
+    var c = res.length;
+    var u = `ObtenerUsuarios - Usuarios obtenidos: ${c}`;
+    await fn.log(u);
+    irpa_core.core.log(u);
+    let l = res.filter((t=>t.Enabled == 1 && !t.GroupDescription.toLowerCase().includes ('casino')));
+    for(const item of l){
+        listaUsuarios.push(item.Identifier);
+    }
+    c = l.length;
+    u = `ObtenerUsuarios - Usuarios validos: ${listaUsuarios}`;
+    irpa_core.core.log(u);
+    await fn.log(u);
+}
+catch(e){
+    const err = `ObtenerUsuarios - Error en servicio Usuarios: ${e}`;
+    irpa_core.core.log(err);
+    await fn.log(err);
+}
+
+Los usuarios obtenidos guardarlos en una variable
+
+Genera la funcion ObtenerAsistencia que haga lo siguiente
+
+let formatDate = (dt) => 
+                dt.getFullYear() +
+                ('0' + (dt.getMonth() + 1)).slice(-2) +
+                ('0' + dt.getDate()).slice(-2);
+
+const DIAS_A_RESTAR_PARA_DIA_ANTERIOR = [2, 3, 1, 1, 1, 1, 1];
+const da= new Date();
+const d = new Date();
+const hIni = '000000';
+const hFin = '235959';
+da.setDate(
+    da.getDate() - DIAS_A_RESTAR_PARA_DIA_ANTERIOR[da.getDay()]);
+let fInicial = formatDate(da).toString() + hIni;
+let fFinal =formatDate(d).toString()+hFin;
+var lista = [];
+return {
+    fInicial,
+    fFinal,
+    lista
+};
+
+const l=[];
+const paginar = (array, p, n) => {
+    return array.slice(n * p, n * p + p);
+};
+const largo = listUsuarios.length/100;
+for(let i = 0; i< largo; i++){
+    l.push(paginar(listUsuarios, 100, i));
+}
+return l;
+
+De la lista obtenida de la funcion paginar, hacer un foreach de los datos y realizar lo siguiente
+
+var res='';
+let largo = rut.length;
+if (largo > 0 && token.length > 0){
+    try{
+        const url= "https://customerapi.geovictoria.com/api/v1/attendancebook";
+        const opts = {
+            url: url,
+            method: 'POST',
+            responseType: 'json',
+            resolveBodyOnly: true,
+            ignoreInvalidCookies: true,
+            headers: {
+                'Accept' : 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': token
+            },
+            body: 
+                JSON.stringify({
+                    StartDate: `${fInicial}`,
+                    EndDate: `${fFinal}`,
+                    UserIds: `${rut}`
+            })
+        };
+        res = await irpa_core.request.call(opts);
+        return res;
+    }
+    catch(e){
+        const err = `Obtener Asistencia - Error en servicio Asistencia: ${e}`;
+        irpa_core.core.log(err);
+        await fn.log(err);
+        return [];
+    }
+}
+else{
+    return [];
+}
+
+De los datos obtenidos generar lo siguiente
+
+var v = listaAsistencia;
+function formatHora(h){
+    if(h.length > 0){
+        return h.substring(0,2) + ':' + h.substring(4,2);
+    }
+    else{
+        return '';
+    }
+}
+function formatFecha(f){
+    if(f.length > 0){
+        return f.substring(6,8) + '-' + f.substring(4,6) + '-' + f.substring(0,4);
+    }else{
+        const d = new Date();
+        return d;
+    }
+}
+function formatRut(ru){
+    // XX.XXX.XXX-X
+    const newRut = ru.replace(/\./g,'').replace(/\-/g, '').trim().toLowerCase();
+    const lastDigit = newRut.substr(-1, 1);
+    const rutDigit = newRut.substr(0, newRut.length-1);
+    let format = '';
+    for (let i = rutDigit.length; i > 0; i--) {
+        const e = rutDigit.charAt(i-1);
+        format = e.concat(format);
+        if (i % 3 === 0){
+            format = '.'.concat(format);
+            }
+    }
+    return format.concat('-').concat(lastDigit);
+}
+function reemplazar(rut){
+    const r = rut.replace(/\./g,'').trim();
+    return r;
+}
+try{
+    const largo = listaAsistencia.Users.length;
+    if(largo > 0){
+        for(let i = 0; i<largo;i++){
+   for(let j =0;j<listaAsistencia.Users[i].PlannedInterval.length;j++){
+        lista.push([
+            listaAsistencia.Users[i].LastName, // apellidos
+            listaAsistencia.Users[i].Name, // nombres
+            formatRut(listaAsistencia.Users[i].Identifier), // rut
+            //r,
+            listaAsistencia.Users[i].GroupDescription, // grupo
+            listaAsistencia.Users[i].PlannedInterval.length > 0 ?
+            formatFecha(listaAsistencia.Users[i].PlannedInterval[j].Date): '', //Fecha
+            listaAsistencia.Users[i].PlannedInterval.length > 0 ? 
+                (listaAsistencia.Users[i].PlannedInterval[j].TimeOffs.length > 0 ?
+                    listaAsistencia.Users[i].PlannedInterval[j].TimeOffs[0].TimeOffTypeDescription:'')
+                        :'', //Permiso
+            listaAsistencia.Users[i].PlannedInterval.length > 0 ? 
+                    (listaAsistencia.Users[i].PlannedInterval[j].Shifts.length > 0 ?
+                        listaAsistencia.Users[i].PlannedInterval[j].Shifts[0].ShiftDisplay:'')
+                        :'', //Turno
+            formatHora(listaAsistencia.Users[i].PlannedInterval.length > 0 ? 
+                        (listaAsistencia.Users[i].PlannedInterval[j].Punches.length > 0 ?
+                            (listaAsistencia.Users[i].PlannedInterval[j].Punches[0].Type.length > 0 ?
+                                (listaAsistencia.Users[i].PlannedInterval[j].Punches[0].Type == 'Ingreso' ?
+                            listaAsistencia.Users[i].PlannedInterval[j].Punches[0].Date.substring(8).substring(4,0):''):''):'')
+                                :''), //Entro
+            listaAsistencia.Users[i].PlannedInterval.length > 0 ? 
+                        (listaAsistencia.Users[i].PlannedInterval[j].Punches.length > 0 ?
+                            listaAsistencia.Users[i].PlannedInterval[j].Punches[0].Type:'')
+                            :'', //tipo
+            listaAsistencia.Users[i].PlannedInterval.length > 0 ? 
+                        (listaAsistencia.Users[i].PlannedInterval[j].Delay.length > 0 ?
+                            listaAsistencia.Users[i].PlannedInterval[j].Delay:'')
+                            :'',   //atraso                 
+            '', // Justificado
+            formatHora(listaAsistencia.Users[i].PlannedInterval.length > 0 ? 
+                        (listaAsistencia.Users[i].PlannedInterval[j].Punches.length > 0 ?
+                            (listaAsistencia.Users[i].PlannedInterval[j].Punches.length > 1 ?
+                                (listaAsistencia.Users[i].PlannedInterval[j].Punches[0].Type == 'Salida' ?
+                            listaAsistencia.Users[i].PlannedInterval[j].Punches[1].Date.substring(8).substring(4,0):''):''):'')
+                                :''), //Salio
+            listaAsistencia.Users[i].PlannedInterval.length > 0 ? 
+                        (listaAsistencia.Users[i].PlannedInterval[j].Punches.length > 0 ?
+                            (listaAsistencia.Users[i].PlannedInterval[j].Punches.length > 1 ?
+                            listaAsistencia.Users[i].PlannedInterval[j].Punches[1].Type:''):'')
+                            :'', //tipo
+            formatHora(listaAsistencia.Users[i].PlannedInterval.length > 0 ? 
+                        (listaAsistencia.Users[i].PlannedInterval[j].Punches.length > 0 ?
+                            (listaAsistencia.Users[i].PlannedInterval[j].Punches.length > 2 ?
+                                (listaAsistencia.Users[i].PlannedInterval[j].Punches[0].Type == 'Ingreso' ?
+                            listaAsistencia.Users[i].PlannedInterval[j].Punches[2].Date.substring(8).substring(4,0):''):''):'')
+                                :''), //Entro
+            listaAsistencia.Users[i].PlannedInterval.length > 0 ? 
+                                (listaAsistencia.Users[i].PlannedInterval[j].Punches.length > 0 ?
+                                    (listaAsistencia.Users[i].PlannedInterval[j].Punches.length > 2 ?
+                                    listaAsistencia.Users[i].PlannedInterval[j].Punches[2].Type:''):'')
+                                    :'', //tipo
+            listaAsistencia.Users[i].PlannedInterval.length > 0 ? 
+                                    (listaAsistencia.Users[i].PlannedInterval[j].Delay.length > 0 ?
+                                        listaAsistencia.Users[i].PlannedInterval[j].BreakDelay:'')
+                                        :'',   //atraso
+            '', // Justificado
+            formatHora(listaAsistencia.Users[i].PlannedInterval.length > 0 ? 
+                (listaAsistencia.Users[i].PlannedInterval[j].Punches.length > 0 ?
+                    (listaAsistencia.Users[i].PlannedInterval[j].Punches.length > 3 ?
+                        (listaAsistencia.Users[i].PlannedInterval[j].Punches[0].Type == 'Salida' ?
+                            listaAsistencia.Users[i].PlannedInterval[j].Punches[3].Date.substring(8).substring(4,0):''):''):'')
+                                :''), //Salio
+            listaAsistencia.Users[i].PlannedInterval.length > 0 ? 
+                        (listaAsistencia.Users[i].PlannedInterval[j].Punches.length > 0 ?
+                            (listaAsistencia.Users[i].PlannedInterval[j].Punches.length > 3 ?
+                            listaAsistencia.Users[i].PlannedInterval[j].Punches[3].Type:''):'')
+                            :'', //tipo
+            listaAsistencia.Users[i].PlannedInterval.length > 0 ? 
+                            (listaAsistencia.Users[i].PlannedInterval[j].Delay.length > 0 ?
+                                listaAsistencia.Users[i].PlannedInterval[j].EarlyLeave:'')
+                                :'',   //adelanto
+            '', //Justificado
+            listaAsistencia.Users[i].PlannedInterval.length > 0 ? 
+                (listaAsistencia.Users[i].PlannedInterval[j].AccomplishedExtraTimeAfter.length > 0 ?
+                    listaAsistencia.Users[i].PlannedInterval[j].AccomplishedExtraTimeAfter:'')
+            :'',   //HEA
+            '', //HEC
+            reemplazar(formatRut(listaAsistencia.Users[i].Identifier)), //HNT
+            listaAsistencia.Users[i].Identifier,
+            listaAsistencia.Users[i].PositionDescription //cargo
+        ]);
+   }   
+        
+}
+    }else{
+        const err = `Obtener Asistencia - No hay datos de Asistencia`;
+        irpa_core.core.log(err);
+        await fn.log(err);
+    }
+}
+catch(e){
+    const err = `Obtener Asistencia - Error en Agregar datos a la lista: ${e} Rut: ${rut}`;
+    irpa_core.core.log(err);
+    await fn.log(err);
+}
+
+Genera la funcion ObtenerPermisos y retornar los datos en una variable
+
+try{
+    const url = "https://customerapi.geovictoria.com/api/v1/TimeOff/GetTypes";
+    const req = {
+        url: url,
+        method: 'POST',
+        data: {}
+    };
+    const opts = {
+        url: url,
+        method: 'POST',
+        responseType: 'json',
+        resolveBodyOnly: true,
+        ignoreInvalidCookies: true,
+        headers: {
+            'Accept' : 'application/json',
+            'Content-Type': 'application/json',
+            "Authorization": token
+        },
+    };
+    var res = await irpa_core.request.call(opts);
+    var li = res.length;
+    var i = `ObtenerPermisos - Permisos Obtenidos: ${li}`;
+    irpa_core.core.log(i);
+    await fn.log(i);
+    let l = res.filter((t=>t.Status == 'enabled'));
+    for(const item of l){
+        listaPermisos.push([item.Id, item.ExternalId, item.TranslatedDescription] );
+    }
+    li = listaPermisos.length;
+    i = `ObtenerPermisos - Permisos Vigentes: ${listaPermisos}`;
+    irpa_core.core.log(i);
+    await fn.log(i);
+}
+catch(e){
+    const err = `ObtenerPermisos - Error en servicio Obtener Permisos: ${e}`;
+    irpa_core.core.log(err);
+    await fn.log(err);
+}
+return listaPermisos;
+
+Genera la funcion GenerarCarpetas que retorne las variables de las carpetas. si las carpetas no existen se deben crear
+
+const userFolder = `C:/Users/${username}`;
+const licenciasFolder = `${userFolder}/Desktop/Licencias`;
+const licenciasFormatoPermisos = `${licenciasFolder}/Formato_permisos`;
+const licenciasFormatoFinal = `${licenciasFolder}/Formato_final_licencias_medicas`;
+const sinTramitar = `${licenciasFolder}/Licencias_sin_tramitar`;
+const tramitadas = `${licenciasFolder}/Licencias_tramitadas`;
+return {
+    downloadsFolder: `${userFolder}/Downloads`,
+    licenciasFormatoPermisosFolder: licenciasFormatoPermisos,
+    licenciasFormatoPermisosXlsx: `${licenciasFormatoPermisos}/permissionImport.xlsx`,
+    licenciasFormatoFinalFolder: licenciasFormatoFinal,
+    licenciasFormatoFinalXlsx: `${licenciasFormatoFinal}/permissionImport.xlsx`,
+    licenciasSinTramitarImedFolder: `${sinTramitar}/imed`,
+    licenciasSinTramitarMedipassFolder: `${sinTramitar}/medipass`,
+    licenciasTramitadasImedFolder: `${tramitadas}/imed`,
+    licenciasTramitadasMedipassFolder: `${tramitadas}/medipass`,
+    downloadsBackup: `${userFolder}/Downloads/respaldo descargas`
+};
+
+En la carpeta Downloads copiar las carpetas y archivos a la carpeta Respaldo Descargas
+Si la carpeta Respaldo Descargas no existe se debe crear
+Eliminar los archivos de la carpeta Downloads
+
+Abrir la siguiente URL https://www.lmempleador.cl/user/login/step2
+Ingresar las credenciales
+Correo: rpa@laboratoriosmaver.com
+Clave: maver921
+Seleccionar boton Siguiente
+
+Setear las fechas de busqueda
+FechaDesde
+const date = new Date();
+date.setDate(date.getDate() - 7);
+
+const pad = (s) => {
+    return `0${s}`.slice(-2);
+};
+
+const str = `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
+return str;
+
+FechaHasta
+const date = new Date();
+
+const pad = (s) => {
+    return `0${s}`.slice(-2);
+};
+
+const str = `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
+return str;
+
+Seleccionar el link Tramitar Licencias  https://www.lmempleador.cl/licences
+En la caja de texto Fecha emisión desde ingresar el valor de FechaDesde
+En la caja de texto Fecha emisión hasta ingresar el valor de FechaHasta
+Seleccionar boton Filtrar
+Esperar que se cargue la grilla y verificar que tenga datos
+Si hay datos, recorrer la grilla y por cada registro seleccionar el boton PDF
+
+Seleccionar el link Licencias Tramitadas https://www.lmempleador.cl/licences/2
+En la caja de texto Fecha emisión desde ingresar el valor de FechaDesde
+En la caja de texto Fecha emisión hasta ingresar el valor de FechaHasta
+Seleccionar boton Filtrar
+Esperar que se cargue la grilla y verificar que tenga datos
+Si hay datos, recorrer la grilla y por cada registro seleccionar el boton PDF
+Seleccionar el boton Salir
+Cerrar la pagina web
+Obtener los archivos PDF descargados
+Buscar dentro de cada uno de ellos los siguientes datos
+RUN
+Si existe el texto "DOCUMENTO NO VÁLIDO PARA TRÁMITES"
+Obtener los siguientes datos
+NOMBRES
+FECHA INICIO REPOSO
+SEXO
+Si no existe el texto "DOCUMENTO NO VÁLIDO PARA TRÁMITES"
+Obtener los siguientes datos
+A.1 IDENTIFICACION DEL TRABAJADOR
+FECHA INICIO DE REPOSO
+N DE DIAS
+
+Guardar estos datos en una variable
+
+Obtener el dia actual
+Si el dia actual es mayor a 5
+Abrir la siguiente URL https://maver.buk.cl/users/sign_in
+En la caja de texto Correo electrónico ingresar rpa@laboratoriosmaver.com
+Seleccionar el boton Siguiente
+En la caja de texto Contraseña ingresar maver921*
+Seleccionar el boton Iniciar Sesion
+
+En el menu lateral seleccionar Reporteria  https://maver.buk.cl/static_pages/portal#informacion
+Seleccionar el link Exportadores https://maver.buk.cl/report/custom_report_templates
+En Mis Reportes seleccionar Reporte Vacaciones Bot
+Seleccionar el boton Descargar
+FechaDesde
+const d = new Date();
+d.setDate(d.getDate()-1);
+return `${d.getDate()}-${d.getMonth()+1}-${d.getFullYear()}`;
+FechaHasta
+const d = new Date();
+d.setDate(d.getDate());
+return `${d.getDate()}-${d.getMonth()+1}-${d.getFullYear()}`;
+
+En el pop up, en la caja de texto Desde ingresar FechaDesde, en la caja de texto Hasta ingresar FechaHasta
+Seleccionar el boton Descargar
+Descargar el archivo en la carpeta Downloads
+Cerrar el pop up
+En Mis Reportes seleccionar Reporte Permisos Bot
+Seleccionar el boton Descargar
+En el pop up Seleccionar el boton Descargar
+Descargar el archivo en la carpeta Downloads
+Cerrar el pop up
+Seleccionar el boton Bot Maver
+Seleccionar el boton Cerrar Sesion
+Cerrar la pagina web
+
+Validar la existencia de este archivo "C:\\Users\\" + Step0.userName + "\\Desktop\\BUK\\Buk vacaciones\\BUK_vacaciones.xlsx"
+Si no existe, se debe crear
+En la carpeta Downloads obtener el excel de vacaciones 
+try{
+    const log = irpa_core.core.log;
+    const path = `C:/Users/${username}/Downloads`;
+    const files = await irpa_core.fs.folder.getFileCollection(path, true);
+    const excels = files.filter(f => f.toLowerCase().endsWith('.xlsx') && f.toLowerCase().includes(' reporte vacaciones bot '));
+
+    if (excels.length === 0) {
+        log('No hay Excel de Vacaciones');
+        return '';
+    } else {
+        return excels[excels.length - 1];
+    }
+}
+catch(e)
+{}
+Copiar el excel de vacaciones en C:\\Users\\" + Step0.userName + "\\Desktop\\BUK\\Buk vacaciones\\BUK_vacaciones.xlsx
+Recorrer el excel de vacaciones, obtener los siguientes datos desde la fila 7 y guardarlos en una variable:
+Rut = Columna A
+Fecha = Columna B
+Extension = Columna C
+Estado = Columna D
+Tipo = Columna E
+
+Validar la existencia de este archivo "C:\\Users\\" + Step0.userName + "\\Desktop\\BUK\\Permisos\\BUK_permisos.xlsx"
+Si no existe, se debe crear
+En la carpeta Downloads obtener el excel de permisos
+try{
+    const log = irpa_core.core.log;
+    const path = `C:/Users/${username}/Downloads`;
+    const files = await irpa_core.fs.folder.getFileCollection(path, true);
+    const excels = files.filter(f => f.toLowerCase().endsWith('.xlsx') && f.toLowerCase().includes(' reporte permisos bot '));
+
+    if (excels.length === 0) {
+        log('No hay Excel de Ausencia');
+    }
+    return excels[excels.length - 1];
+
+}
+catch(e){}
+
+Copiar el excel de permisos en C:\\Users\\" + Step0.userName + "\\Desktop\\BUK\\Permisos\\BUK_permisos.xlsx
+Recorrer el excel de permisos, obtener los siguientes datos desde la fila 7 y guardarlos en una variable:
+Rut = Columna A
+Extension = Columna B
+Fecha = Columna C
+Tipo Permiso = Columna D
+
+Concatenar las variables de vacaciones,de permisos y de licencias en una sola variable param
+
+Generar la funcion SubirPermisos que realice lo siguiente, los datos debe obtenerlos desde la variable param
+var res ='';
+let _error = 0; 
+var l = param.length;
+var rutMaver = '921210000';
+await fn.log(`SubirPermiso - Validar datos lista ${param}`);
+if(l > 0){
+    try{
+        //const url= "https://customerapi.geovictoria.com/api/v1/TimeOff/Upsert";
+        const url= "https://customerapi-sandbox.geovictoria.com/api/v1/TimeOff/Upsert";
+        const opts = {
+            url: url,
+            method: 'POST',
+            responseType: 'json',
+            resolveBodyOnly: true,
+            ignoreInvalidCookies: true,
+            headers: {
+                'Accept' : 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': token
+            },
+            body: 
+                JSON.stringify({
+                    UserIdentifier:  `${param[0]}`,
+                    TimeOffTypeId: `${param[1]}`,
+                    StartDate: `${param[2]}`,
+                    EndDate:`${param[4]}`,
+                    CreatedByIdentifier:`${rutMaver}`,//rut maver
+                    Description:'',
+                    StartTime:'00:00',
+                    EndTime:'23:59',
+                    Origin: 'API'
+            })
+        };
+        res = await irpa_core.request.call(opts);
+        listaC.push([param[0], param[1],res]);
+        return res;
+    }
+    catch(e){
+        const err = `SubirPermiso - Error en servicio Subir Permiso: ${e} Rut: ${param[0]}`;
+        irpa_core.core.log(err);
+        lista.push([param]);
+        _error = 1;
+        await fn.log(err);
+    }
+}else{
+    irpa_core.core.log('No hay informacion del permiso');
+    await fn.log('SubirPermiso - No hay informacion del permiso');
+    return [];
+}
+
+Reporte Final
+
+
+Genera la funcion ObtenerUsuarios para que haga lo siguiente
+try{
+    const url = "https://apiv3.geovictoria.com/api/User/List";
+    const req = {
+        url: url,
+        method: 'POST',
+        data: {}
+    };
+    const opts = {
+        url: url,
+        method: 'POST',
+        responseType: 'json',
+        resolveBodyOnly: true,
+        headers: {
+            'Accept' : 'application/json',
+            'Content-Type': 'application/json',
+            "Authorization": "OAuth oauth_consumer_key=\"d26548\",oauth_signature_method=\"HMAC-SHA1\",oauth_timestamp=\"1687900677\",oauth_nonce=\"oGFO0EqSUCa\",oauth_version=\"1.0\",oauth_signature=\"xXPjTubdzp8LSfRNNM6KlzEBBcE%3D\""
+        },
+    };
+    const res = await irpa_core.request.call(opts);
+    var c = res.length;
+    var u = `ObtenerUsuarios - Usuarios obtenidos: ${c}`;
+    await fn.log(u);
+    irpa_core.core.log(u);
+    let l = res.filter((t=>t.Enabled == 1 && !t.GroupDescription.toLowerCase().includes ('casino')));
+    for(const item of l){
+        listaUsuarios.push(item.Identifier);
+    }
+    c = l.length;
+    u = `ObtenerUsuarios - Usuarios validos: ${listaUsuarios}`;
+    irpa_core.core.log(u);
+    await fn.log(u);
+}
+catch(e){
+    const err = `ObtenerUsuarios - Error en servicio Usuarios: ${e}`;
+    irpa_core.core.log(err);
+    await fn.log(err);
+}
+
+Los usuarios obtenidos guardarlos en la variable listaUsuarios
+
+let formatDate = (dt) => 
+                dt.getFullYear() +
+                ('0' + (dt.getMonth() + 1)).slice(-2) +
+                ('0' + dt.getDate()).slice(-2);
+
+const DIAS_A_RESTAR_PARA_DIA_ANTERIOR = [2, 3, 1, 1, 1, 1, 1];
+const da= new Date();
+const d = new Date();
+const hIni = '000000';
+const hFin = '235959';
+da.setDate(
+    da.getDate() - DIAS_A_RESTAR_PARA_DIA_ANTERIOR[da.getDay()]);
+let fInicial = formatDate(da).toString() + hIni;
+let fFinal =formatDate(d).toString()+hFin;
+var lista = [];
+return {
+    fInicial,
+    fFinal,
+    lista
+};
+Paginar los datos de la listaUsuarios
+
+const l=[];
+const paginar = (array, p, n) => {
+    return array.slice(n * p, n * p + p);
+};
+const largo = listaUsuarios.length/100;
+for(let i = 0; i< largo; i++){
+    l.push(paginar(listaUsuarios, 100, i));
+}
+return listaPaginada;
+Recorrer la listaPaginada con un foreach y ejecutar lo siguiente
+var res='';
+let largo = rut.length;
+if (largo > 0 && token.length > 0){
+    try{
+        const url= "https://customerapi.geovictoria.com/api/v1/attendancebook";
+        const opts = {
+            url: url,
+            method: 'POST',
+            responseType: 'json',
+            resolveBodyOnly: true,
+            ignoreInvalidCookies: true,
+            headers: {
+                'Accept' : 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': token
+            },
+            body: 
+                JSON.stringify({
+                    StartDate: `${fInicial}`,
+                    EndDate: `${fFinal}`,
+                    UserIds: `${rut}`
+            })
+        };
+        res = await irpa_core.request.call(opts);
+        return res;
+    }
+    catch(e){
+        const err = `Obtener Asistencia - Error en servicio Asistencia: ${e}`;
+        irpa_core.core.log(err);
+        await fn.log(err);
+        return [];
+    }
+}
+else{
+    return [];
+}
+De los datos obtenidos generar lo siguiente
+var v = listaAsistencia;
+function formatHora(h){
+    if(h.length > 0){
+        return h.substring(0,2) + ':' + h.substring(4,2);
+    }
+    else{
+        return '';
+    }
+}
+function formatFecha(f){
+    if(f.length > 0){
+        return f.substring(6,8) + '-' + f.substring(4,6) + '-' + f.substring(0,4);
+    }else{
+        const d = new Date();
+        return d;
+    }
+}
+function formatRut(ru){
+    // XX.XXX.XXX-X
+    const newRut = ru.replace(/\./g,'').replace(/\-/g, '').trim().toLowerCase();
+    const lastDigit = newRut.substr(-1, 1);
+    const rutDigit = newRut.substr(0, newRut.length-1);
+    let format = '';
+    for (let i = rutDigit.length; i > 0; i--) {
+        const e = rutDigit.charAt(i-1);
+        format = e.concat(format);
+        if (i % 3 === 0){
+            format = '.'.concat(format);
+            }
+    }
+    return format.concat('-').concat(lastDigit);
+}
+function reemplazar(rut){
+    const r = rut.replace(/\./g,'').trim();
+    return r;
+}
+try{
+    const largo = listaAsistencia.Users.length;
+    if(largo > 0){
+        for(let i = 0; i<largo;i++){
+   for(let j =0;j<listaAsistencia.Users[i].PlannedInterval.length;j++){
+        lista.push([
+            listaAsistencia.Users[i].LastName, // apellidos
+            listaAsistencia.Users[i].Name, // nombres
+            formatRut(listaAsistencia.Users[i].Identifier), // rut
+            //r,
+            listaAsistencia.Users[i].GroupDescription, // grupo
+            listaAsistencia.Users[i].PlannedInterval.length > 0 ?
+            formatFecha(listaAsistencia.Users[i].PlannedInterval[j].Date): '', //Fecha
+            listaAsistencia.Users[i].PlannedInterval.length > 0 ? 
+                (listaAsistencia.Users[i].PlannedInterval[j].TimeOffs.length > 0 ?
+                    listaAsistencia.Users[i].PlannedInterval[j].TimeOffs[0].TimeOffTypeDescription:'')
+                        :'', //Permiso
+            listaAsistencia.Users[i].PlannedInterval.length > 0 ? 
+                    (listaAsistencia.Users[i].PlannedInterval[j].Shifts.length > 0 ?
+                        listaAsistencia.Users[i].PlannedInterval[j].Shifts[0].ShiftDisplay:'')
+                        :'', //Turno
+            formatHora(listaAsistencia.Users[i].PlannedInterval.length > 0 ? 
+                        (listaAsistencia.Users[i].PlannedInterval[j].Punches.length > 0 ?
+                            (listaAsistencia.Users[i].PlannedInterval[j].Punches[0].Type.length > 0 ?
+                                (listaAsistencia.Users[i].PlannedInterval[j].Punches[0].Type == 'Ingreso' ?
+                            listaAsistencia.Users[i].PlannedInterval[j].Punches[0].Date.substring(8).substring(4,0):''):''):'')
+                                :''), //Entro
+            listaAsistencia.Users[i].PlannedInterval.length > 0 ? 
+                        (listaAsistencia.Users[i].PlannedInterval[j].Punches.length > 0 ?
+                            listaAsistencia.Users[i].PlannedInterval[j].Punches[0].Type:'')
+                            :'', //tipo
+            listaAsistencia.Users[i].PlannedInterval.length > 0 ? 
+                        (listaAsistencia.Users[i].PlannedInterval[j].Delay.length > 0 ?
+                            listaAsistencia.Users[i].PlannedInterval[j].Delay:'')
+                            :'',   //atraso                 
+            '', // Justificado
+            formatHora(listaAsistencia.Users[i].PlannedInterval.length > 0 ? 
+                        (listaAsistencia.Users[i].PlannedInterval[j].Punches.length > 0 ?
+                            (listaAsistencia.Users[i].PlannedInterval[j].Punches.length > 1 ?
+                                (listaAsistencia.Users[i].PlannedInterval[j].Punches[0].Type == 'Salida' ?
+                            listaAsistencia.Users[i].PlannedInterval[j].Punches[1].Date.substring(8).substring(4,0):''):''):'')
+                                :''), //Salio
+            listaAsistencia.Users[i].PlannedInterval.length > 0 ? 
+                        (listaAsistencia.Users[i].PlannedInterval[j].Punches.length > 0 ?
+                            (listaAsistencia.Users[i].PlannedInterval[j].Punches.length > 1 ?
+                            listaAsistencia.Users[i].PlannedInterval[j].Punches[1].Type:''):'')
+                            :'', //tipo
+            formatHora(listaAsistencia.Users[i].PlannedInterval.length > 0 ? 
+                        (listaAsistencia.Users[i].PlannedInterval[j].Punches.length > 0 ?
+                            (listaAsistencia.Users[i].PlannedInterval[j].Punches.length > 2 ?
+                                (listaAsistencia.Users[i].PlannedInterval[j].Punches[0].Type == 'Ingreso' ?
+                            listaAsistencia.Users[i].PlannedInterval[j].Punches[2].Date.substring(8).substring(4,0):''):''):'')
+                                :''), //Entro
+            listaAsistencia.Users[i].PlannedInterval.length > 0 ? 
+                                (listaAsistencia.Users[i].PlannedInterval[j].Punches.length > 0 ?
+                                    (listaAsistencia.Users[i].PlannedInterval[j].Punches.length > 2 ?
+                                    listaAsistencia.Users[i].PlannedInterval[j].Punches[2].Type:''):'')
+                                    :'', //tipo
+            listaAsistencia.Users[i].PlannedInterval.length > 0 ? 
+                                    (listaAsistencia.Users[i].PlannedInterval[j].Delay.length > 0 ?
+                                        listaAsistencia.Users[i].PlannedInterval[j].BreakDelay:'')
+                                        :'',   //atraso
+            '', // Justificado
+            formatHora(listaAsistencia.Users[i].PlannedInterval.length > 0 ? 
+                (listaAsistencia.Users[i].PlannedInterval[j].Punches.length > 0 ?
+                    (listaAsistencia.Users[i].PlannedInterval[j].Punches.length > 3 ?
+                        (listaAsistencia.Users[i].PlannedInterval[j].Punches[0].Type == 'Salida' ?
+                            listaAsistencia.Users[i].PlannedInterval[j].Punches[3].Date.substring(8).substring(4,0):''):''):'')
+                                :''), //Salio
+            listaAsistencia.Users[i].PlannedInterval.length > 0 ? 
+                        (listaAsistencia.Users[i].PlannedInterval[j].Punches.length > 0 ?
+                            (listaAsistencia.Users[i].PlannedInterval[j].Punches.length > 3 ?
+                            listaAsistencia.Users[i].PlannedInterval[j].Punches[3].Type:''):'')
+                            :'', //tipo
+            listaAsistencia.Users[i].PlannedInterval.length > 0 ? 
+                            (listaAsistencia.Users[i].PlannedInterval[j].Delay.length > 0 ?
+                                listaAsistencia.Users[i].PlannedInterval[j].EarlyLeave:'')
+                                :'',   //adelanto
+            '', //Justificado
+            listaAsistencia.Users[i].PlannedInterval.length > 0 ? 
+                (listaAsistencia.Users[i].PlannedInterval[j].AccomplishedExtraTimeAfter.length > 0 ?
+                    listaAsistencia.Users[i].PlannedInterval[j].AccomplishedExtraTimeAfter:'')
+            :'',   //HEA
+            '', //HEC
+            reemplazar(formatRut(listaAsistencia.Users[i].Identifier)), //HNT
+            listaAsistencia.Users[i].Identifier,
+            listaAsistencia.Users[i].PositionDescription //cargo
+        ]);
+   }   
+        
+}
+    }else{
+        const err = `Obtener Asistencia - No hay datos de Asistencia`;
+        irpa_core.core.log(err);
+        await fn.log(err);
+    }
+}
+catch(e){
+    const err = `Obtener Asistencia - Error en Agregar datos a la lista: ${e} Rut: ${rut}`;
+    irpa_core.core.log(err);
+    await fn.log(err);
+} 
+
+Con los datos obtenidos generar lo siguiente
+var l = data;
+const x = irpa_core.core.log;
+let m = `ReporteFinal_Ws - Total de datos a procesar: ${l.length}`;
+x(m);
+await fn.log(m);
+let formatDate = (dateObj) => ('0' + dateObj.getDate()).slice(-2) +
+    '-' +
+    ('0' + (dateObj.getMonth() + 1)).slice(-2) +
+    '-' +
+    dateObj.getFullYear();
+
+let date = new Date();
+let hoy =formatDate(date);
+// [dom, lun..]
+const DIAS_A_RESTAR_PARA_DIA_ANTERIOR = [2, 3, 1, 1, 1, 1, 1];
+
+date.setDate(
+    date.getDate() - DIAS_A_RESTAR_PARA_DIA_ANTERIOR[date.getDay()]);
+
+let diaLaboralAnterior =formatDate(date);
+
+const COLS = {
+    FECHA: 4,
+    PERMISO: 5,
+    TURNO: 6,
+    ENTRO: 7,
+};
+
+
+const setPresenteAusente = (fila) => {
+    if (fila[COLS.PERMISO] === '') {
+        fila[COLS.PERMISO] = fila[COLS.ENTRO] ? 'Presente' : 'Ausencia';
+    }
+    return fila;
+};
+
+const esTurnoManana = (s) => {
+    return s.startsWith('06') ||
+        s.startsWith('07') ||
+        s.startsWith('08') ||
+        s.startsWith('09');
+};
+
+const esTurnoTarde = (s) => {
+    return s.startsWith('16') ||
+        s.startsWith('17') ||
+        s.startsWith('20') ||
+        s.startsWith('22');
+};
+
+const filtroTurnos = (fila) => {
+
+    let incluir = false;
+
+    if (fila[COLS.FECHA].includes(hoy) &&
+        esTurnoManana(fila[COLS.TURNO])) {
+        incluir = true;
+    } else if (fila[COLS.FECHA].includes(diaLaboralAnterior) &&
+        esTurnoTarde(fila[COLS.TURNO])) {
+        incluir = true;
+    }
+
+    return incluir;
+
+};
+const fec =(dato)=>{
+    dato[4] = dato[4].replace('-','.').replace('-','.');
+    return dato;
+};
+var ret = data.map(setPresenteAusente).filter(filtroTurnos);
+ret = ret.map(fec);
+m =`ReporteFinal_Ws - Total de registros a informar: ${ret.length}`;
+x(m);
+await fn.log(ret);
+return ret;
+
+Validar la existencia del siguiente archivo 'C:/Users/' + Step0.userName + '/Desktop/Geovictoria/Reporte Final API/Informe de Asistencia VersionFinal.xlsx'
+Si no existe, se debe crear
+Abrir el excel y seleccionar la hoja Base datos
+Borrar los datos existentes
+Agregar los datos al excel desde la variable ret
+
+
+
+let formatDate = (dt) => 
+                dt.getFullYear() +
+                ('0' + (dt.getMonth() + 1)).slice(-2) +
+                ('0' + dt.getDate()).slice(-2);
+
+const da= new Date();
+const d = new Date();
+const hIni = '000000';
+const hFin = '235959';
+da.setDate(da.getDate() - 90);
+let fInicial = formatDate(da).toString() + hIni;
+let fFinal =formatDate(d).toString() + hFin;
+var lista =[];
+return {
+    fInicial,
+    fFinal,
+    lista
+};
+
+De la variable listaUsuarios
+Paginar los datos de la variable listaUsuarios
+const l=[];
+const paginar = (array, p, n) => {
+    return array.slice(n * p, n * p + p);
+};
+const largo = listUsuarios.length/100;
+for(let i = 0; i< largo; i++){
+    l.push(paginar(listUsuarios, 100, i));
+}
+return l;
+
+Recorrer la lista paginada con un foreach y ejecutar lo siguiente
+
+var res;
+let largo = rut.length;
+if (largo > 0 && token.length > 0){
+    try{
+        const url= "https://customerapi.geovictoria.com/api/v1/TimeOff/Get";
+        const opts = {
+            url: url,
+            method: 'POST',
+            responseType: 'json',
+            resolveBodyOnly: true,
+            ignoreInvalidCookies: true,
+            headers: {
+                'Accept' : 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': token
+            },
+            body: 
+                JSON.stringify({
+                    StartDate: `${fInicial}`,
+                    EndDate: `${fFinal}`,
+                    UserIds: `${rut}`
+            })
+        };
+        res = await irpa_core.request.call(opts);
+        return res;
+    }
+    catch(e){
+        const err = `Descarga Permisos - Error en servicio Permisos: ${e}`;
+        irpa_core.core.log(err);
+        await fn.log(err);
+        return [];
+    }
+}
+const removeAccents = (str) => {
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+};
+
+try{
+    let path = "C:\\Users\\" + userName + "\\Desktop\\GeoVictoria\\Permisos.json";
+    const txt = await irpa_core.fs.file.read(path, irpa_core.enums.file.encoding.ASCII);
+    let l = JSON.parse(txt);
+
+    for(let item of listaPermisos){
+        for(let x of l){
+            if ((removeAccents(item.TimeOffTypeDescription) == x) && item.Ends >=fFinal){
+                lista.push(item);
+            }
+        }
+    }    
+}
+
+catch(e){
+    const err = `Descarga Permisos - Error en Agregar datos a la lista: ${e} Rut: ${rut}`;
+    irpa_core.core.log(err);
+    await fn.log(err);
+}
+
+Generar la funcion ObtenerUsuarios y realizar lo siguiente
+
+var listaUsuarios = [];
+try{
+    const url = "https://apiv3.geovictoria.com/api/User/List";
+    const req = {
+        url: url,
+        method: 'POST',
+        data: {}
+    };
+    const opts = {
+        url: url,
+        method: 'POST',
+        responseType: 'json',
+        resolveBodyOnly: true,
+        headers: {
+            'Accept' : 'application/json',
+            'Content-Type': 'application/json',
+            "Authorization": "OAuth oauth_consumer_key=\"d26548\",oauth_signature_method=\"HMAC-SHA1\",oauth_timestamp=\"1687900677\",oauth_nonce=\"oGFO0EqSUCa\",oauth_version=\"1.0\",oauth_signature=\"xXPjTubdzp8LSfRNNM6KlzEBBcE%3D\""
+        },
+    };
+    const res = await irpa_core.request.call(opts);
+    let l = res.filter((t=>t.Enabled == 1 && !t.GroupDescription.toLowerCase().includes ('casino')));
+    for(const item of l){
+        listaUsuarios.push(
+            {id:item.Identifier,
+            nombre: item.Name,
+            apellidos: item.LastName,
+            cargo: item.positionName
+            });
+    }
+}
+catch(e){
+    const err = `ObtenerUsuarios - Error en servicio Usuarios en Descarga Permisos: ${e}`;
+    irpa_core.core.log(err);
+   await fn.log(err);
+}
+return listaUsuarios;
+
+De los datos obtenidos, realizar lo siguiente
+
+
+const l = listaUsuarios;
+const d = lista;
+const dif = (ini, fin)=>{
+    let i = ini.substring(0,4) + '-' + ini.substring(4,6) + '-' + ini.substring(6,8);
+    let f = fin.substring(0,4) + '-' + fin.substring(4,6) + '-' + fin.substring(6,8);
+    let fi = new Date(i);
+    let ff = new Date(f);
+    fi.setDate(fi.getDate() + 1);
+    ff.setDate(ff.getDate() + 1);
+    let resta = Math.abs(ff - fi);
+    return resta/ (1000*3600*24);
+};
+const fec = (f)=>{
+    return f.substring(6,8) + '-' + f.substring(4,6) + '-' + f.substring(0,4) ;
+};
+const formatRut= (ru)=> {
+    // XX.XXX.XXX-X
+    const newRut = ru.replace(/\./g,'').replace(/\-/g, '').trim().toLowerCase();
+    const lastDigit = newRut.substr(-1, 1);
+    const rutDigit = newRut.substr(0, newRut.length-1);
+    let format = '';
+    for (let i = rutDigit.length; i > 0; i--) {
+        const e = rutDigit.charAt(i-1);
+        format = e.concat(format);
+        if (i % 3 === 0){
+            format = '.'.concat(format);
+            }
+    }
+    return format.concat('-').concat(lastDigit);
+};
+try{
+    let x =[];
+    for (let i = 0; i< d.length; i++){
+        for(let item of l){
+            if(d[i].UserIdentifier == item.id){
+                x.push([item.apellidos,
+                    item.nombre, 
+                    formatRut(item.id),
+                    item.cargo, 
+                    d[i].TimeOffTypeDescription,
+                    '',
+                    fec(d[i].Starts),
+                    fec(d[i].Ends),
+                    '','','',
+                    dif(d[i].Ends,d[i].Starts)]);
+            }
+        }
+    }
+    
+    let li = `Total Permisos Descargados: ${x.length}`;
+    await fn.log(li);
+    return x;
+}
+catch(e){
+    const err = `Descarga Permisos - Error en Generar Lista: ${e}`;
+    irpa_core.core.log(err);
+    await fn.log(err);
+    return [];
+}
+
+En el excel cambiar a la hoja Detalle Licencias Médicas
+Borrar los datos de la hoja Detalle Licencias Médicas
+Copiar los datos desde la variable licencias
+Guardar los datos
+En el excel cambiar a la hoja Asistencia Maver 
+Actualizar tablas dinamicas
+Cerrar excel
